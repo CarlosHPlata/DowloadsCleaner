@@ -1,45 +1,44 @@
-from watchdog.events import FileSystemEventHandler
+from fileCleaner import FileCleaner
+from fileEventHandler import FileEventHandler
+
 from watchdog.observers import Observer
-from pathlib import Path
+import sys
 from time import sleep
-import json
-import shutil
+from pathlib import Path
 
-class FileEventHandler(FileSystemEventHandler):
-    
-    def __init__(self, watch_path: Path):
-        self.src_path = watch_path.resolve()
+SRC_PATH = Path.home() / 'Downloads'
+DESTINATION_PATH = Path.home()
 
-    
-    def on_modified(self, event):
-        for child in self.src_path.iterdir():
-            if child.is_file():
-                print(child.name)
+
+class BackgroundProcess:
+
+    def run(self):
+        event_handler = FileEventHandler(SRC_PATH, DESTINATION_PATH)
+        observer = Observer()
+        observer.schedule(event_handler, f'{SRC_PATH}', recursive=True)
+        observer.start()
+
+        try:
+            while True:
+                sleep(60)
+        except KeyboardInterrupt:
+            observer.stop()
+
+        observer.join()
+        print('finished successfully')
+        
+
 
 
 
 if __name__ == '__main__':
-
-    with open('filetypes.json') as file:
-        files = json.load(file)
-        formats = files['formats']
+    args = sys.argv
     
-    if '.txt' in formats:
-        print('its working bitch')
+    if 'bg' in args:
+        print('scanning for file changes')
+        background = BackgroundProcess()
+        background.run()
 
-    watch_path = Path.home() / 'Desktop'
-    event_handler = FileEventHandler(watch_path)
-    
-    observer = Observer()
-    observer.schedule(event_handler, f'{watch_path}', recursive=True)
-    observer.start()
-
-    try :
-        while True:
-            print('looking for changes')
-            sleep(20)
-    except KeyboardInterrupt:
-        observer.stop()
-    
-    observer.join()
-    print('finished successfully')
+    else:
+        cleaner = FileCleaner(src_path = SRC_PATH, destination_path = DESTINATION_PATH)
+        cleaner.clean()
